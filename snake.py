@@ -1,4 +1,5 @@
 from copy import copy
+from random import seed
 import numpy as np
 
 class Snake:
@@ -61,5 +62,5 @@ class Snake:
         self.blocks[0, 1] += delta_y
 
     def increase(self, x, y):
-        np.pad(self.blocks, axis=0, mode="constant")
-        self.blocks[:, -1]
+        tail = [x, y]
+        self.blocks = np.vstack([self.blocks, tail])

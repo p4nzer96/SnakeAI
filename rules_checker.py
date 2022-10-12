@@ -20,5 +20,5 @@ def check_on_wall(snake, wall_coords):
 def check_on_itself(snake):
 
     _, count = np.unique(snake.blocks, axis=0, return_counts=True)
-
-    return np.any(count) > 1
+        
+    return np.any(count > 1)

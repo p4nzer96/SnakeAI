@@ -1,19 +1,30 @@
-from snake_env import SnakeEnv
-import imageio
-import os
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
-for file in os.listdir('.'):
-    if file.endswith('.jpg'):
-        os.remove(file)
+from snake_env import SnakeEnv
+import numpy as np
+from tqdm import tqdm
+
+
+fig, ax = plt.subplots()
+
+ims = []
 
 env = SnakeEnv()
-env.game_test()
 
-images = []
+for i in tqdm(range(500)):
+    try:
+        env.step()
+        im = ax.imshow(env.game_grid, cmap="gray", animated=True)
+        ims.append([im])
+    except Exception as e:
+        print(e)
+        break
 
-for file_name in sorted(os.listdir('.')):
-    if file_name.endswith('.jpg'):
-        file_path = os.path.join('.', file_name)
-        images.append(imageio.imread(file_path))
-        print(file_name)
-imageio.mimsave('../full_img.gif', images)
+ani = animation.ArtistAnimation(fig, ims, interval=20, blit=True,
+                                repeat=False)
+
+ani.save('../animation.gif', writer='imagemagick', fps=30)
+
+
+plt.show()

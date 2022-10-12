@@ -1,10 +1,6 @@
 import random
-import matplotlib.pyplot as plt
 
-import os
 import numpy as np
-import PIL
-from PIL import Image
 from ai_module import greedy_search
 from apple import Apple
 from rules_checker import check_on_itself, check_on_wall, check_eat_apple
@@ -66,19 +62,59 @@ class SnakeEnv:
         return snake
 
     def get_apple(self):
+        
+        # To improve
+
+        count = 0 # Debug
 
         if self.snake is None:
             raise ValueError("Snake not defined")
 
         while True:
+            
+            count += 1
+            
+            if count == 100000:
+                print("I'm stuck")
+                #raise Exception()
+            
+            x, y = (random.randint(1, self.x_grid - 2), random.randint(1, self.y_grid - 2))
 
-            x, y = (random.randint(4, self.x_grid - 4), random.randint(4, self.y_grid - 4 - 1))
-
-            if np.array([x, y]) not in self.snake.blocks:
-
+            if not (np.array([x, y]) == self.snake.blocks).all(axis=1).any():
+                
                 break
         
         return Apple(x, y)
+
+    def get_ovr_dir(self):
+
+            head_x, head_y = self.snake.blocks[0]
+            tail_x, tail_y = self.snake.blocks[-1]
+            
+            if abs(head_x - tail_x) > abs(head_y - tail_y):
+                
+                if head_x - tail_x > 0:
+
+                    return "right"
+
+                else:
+
+                    return "left"
+
+            else:
+
+                if head_y - tail_y > 0:
+
+                    return "down"
+
+                else:
+
+                    return "up"
+    
+    def increase(self):
+
+        x, y = self.snake.blocks[-1]
+        self.snake.increase(x, y)
 
     def update_grid(self):
 
@@ -99,44 +135,20 @@ class SnakeEnv:
 
         self.game_grid[self.apple.position[1], self.apple.position[0]] = 100
 
-    def game_test(self):
+    def step(self):
 
-        inputs = np.random.choice(["up", "down", "right", "left"], 100)
+        comm = greedy_search(self.snake, self.apple)
 
-        self.game_grid = self.generate_grid()
+        self.snake.move(comm)
+        if check_on_wall(self.snake, [1, 1, 38, 28]) or check_on_itself(self.snake):
 
-        for i in range(100):
+            self.game_grid = self.generate_grid()
 
-            comm = greedy_search(self.snake, self.apple)
+        if check_on_itself(self.snake):
+            self.game_grid = self.generate_grid()
 
-            self.snake.move(comm)
-            if check_on_wall(self.snake, [1, 1, 38, 28]) or check_on_itself(self.snake):
-    
-                self.game_grid = self.generate_grid()
-                
-            if check_eat_apple(self.snake, self.apple):
-                self.apple = self.get_apple()
-            
-            self.update_grid()
-
-            im = Image.fromarray(np.uint8(self.game_grid), mode = "L")
-            im_r = im.resize((800, 600), resample=PIL.Image.BOX)
-            im_r.save("frame_{:02d}.jpg".format(i))
-
-    def test(self):
-
-        fig, axs = plt.subplots(1, 4)
+        if check_eat_apple(self.snake, self.apple):
+            self.apple = self.get_apple()
+            self.increase()
         
-        self.game_grid = self.generate_grid()
-
-        
-        for i in range(4):
-            for j in range(4):
-                self.snake.move(direction="left")
-            self.update_grid()
-
-            axs[i].imshow(self.game_grid)
-            axs[i].set_title("It{}".format(self.snake.blocks))
-
-        plt.show()
-     
+        self.update_grid()
