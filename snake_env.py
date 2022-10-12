@@ -7,20 +7,29 @@ from rules_checker import check_on_itself, check_on_wall, check_eat_apple
 
 from snake import Snake
 
+
 class SnakeEnv:
 
     def __init__(self):
 
+        # Constants
+
+        self.WALL_VALUE = 255
+        self.HEAD_VALUE = 200
+        self.SNAKE_VALUE = 150
+        self.APPLE_VALUE = 100
+
         self.x_grid = 40
         self.y_grid = 30
-        
+
         self.snake = None
         self.apple = None
 
         self.game_grid = self.generate_grid()
 
         self.direction = None
-        
+
+        self.comp_dirs = {"up": "down", "down": "up", "right": "left", "left": "right"}
 
     def generate_grid(self):
 
@@ -28,25 +37,33 @@ class SnakeEnv:
 
         # Defining the walls
 
-        grid[0, :] = 255
-        grid[self.y_grid-1, :] = 255
-        grid[:, 0] = 255
-        grid[:, self.x_grid-1] = 255
+        grid[0, :] = self.WALL_VALUE
+        grid[self.y_grid - 1, :] = self.WALL_VALUE
+        grid[:, 0] = self.WALL_VALUE
+        grid[:, self.x_grid - 1] = self.WALL_VALUE
+
+        # Getting a random orientation for snake initialization
 
         orientation = ["up", "down", "right", "left"]
         random.shuffle(orientation)
 
+        # Defining the snake
+
         self.snake = self.get_snake(orientation)
-                
-        for x, y in self.snake.blocks:
-            grid[y, x] = 150
 
-        grid[self.snake.blocks[0][1], self.snake.blocks[0][0]] = 200
+        # Updating the grid with snake locations
 
-        self.apple = self.get_apple()
-        
+        for i, (x, y) in enumerate(self.snake.blocks):
+            grid[y, x] = self.HEAD_VALUE if i == 0 else self.SNAKE_VALUE
+
+        # Defining the apple
+
+        self.apple = self.get_apple(grid)
+
+        # Updating the grid with apple location
+
         x, y = self.apple.position
-        grid[y, x] = 100
+        grid[y, x] = self.APPLE_VALUE
 
         return grid
 
@@ -55,62 +72,48 @@ class SnakeEnv:
         s_length = 3
         offset = s_length + 1
 
-        head_x, head_y = [random.randint(offset, self.x_grid - offset - 1), random.randint(offset, self.y_grid - offset - 1)]
+        head_x, head_y = [random.randint(offset, self.x_grid - offset - 1),
+                          random.randint(offset, self.y_grid - offset - 1)]
 
-        snake = Snake(head_x, head_y,  length=3, orientation = orientations[0])
+        snake = Snake(head_x, head_y, length=s_length, orientation=orientations[0])
 
         return snake
 
-    def get_apple(self):
-        
-        # To improve
+    def get_apple(self, grid):
 
-        count = 0 # Debug
+        # we grab the indexes of the ones
+        y_list, x_list = np.where(grid == 0)
+        # we chose one index randomly
+        i = np.random.randint(len(x_list))
+        x, y = [x_list[i], y_list[i]]
 
-        if self.snake is None:
-            raise ValueError("Snake not defined")
-
-        while True:
-            
-            count += 1
-            
-            if count == 100000:
-                print("I'm stuck")
-                #raise Exception()
-            
-            x, y = (random.randint(1, self.x_grid - 2), random.randint(1, self.y_grid - 2))
-
-            if not (np.array([x, y]) == self.snake.blocks).all(axis=1).any():
-                
-                break
-        
         return Apple(x, y)
 
     def get_ovr_dir(self):
 
-            head_x, head_y = self.snake.blocks[0]
-            tail_x, tail_y = self.snake.blocks[-1]
-            
-            if abs(head_x - tail_x) > abs(head_y - tail_y):
-                
-                if head_x - tail_x > 0:
+        head_x, head_y = self.snake.blocks[0]
+        tail_x, tail_y = self.snake.blocks[-1]
 
-                    return "right"
+        if abs(head_x - tail_x) > abs(head_y - tail_y):
 
-                else:
+            if head_x - tail_x > 0:
 
-                    return "left"
+                return "right"
 
             else:
 
-                if head_y - tail_y > 0:
+                return "left"
 
-                    return "down"
+        else:
 
-                else:
+            if head_y - tail_y > 0:
 
-                    return "up"
-    
+                return "down"
+
+            else:
+
+                return "up"
+
     def increase(self):
 
         x, y = self.snake.blocks[-1]
@@ -121,19 +124,14 @@ class SnakeEnv:
         self.game_grid.fill(0)
 
         self.game_grid[0, :] = 255
-        self.game_grid[self.y_grid-1, :] = 255
+        self.game_grid[self.y_grid - 1, :] = 255
         self.game_grid[:, 0] = 255
-        self.game_grid[:, self.x_grid-1] = 255
-        
-        try: 
-            for x, y in self.snake.blocks:
-                self.game_grid[y, x] = 150
-        except IndexError:
-            print(self.snake.blocks)
+        self.game_grid[:, self.x_grid - 1] = 255
 
-        self.game_grid[self.snake.blocks[0][1], self.snake.blocks[0][0]] = 200
+        for i, (x, y) in enumerate(self.snake.blocks):
+            self.game_grid[y, x] = self.HEAD_VALUE if i == 0 else self.SNAKE_VALUE
 
-        self.game_grid[self.apple.position[1], self.apple.position[0]] = 100
+        self.game_grid[self.apple.position[1], self.apple.position[0]] = self.APPLE_VALUE
 
     def step(self):
 
@@ -141,14 +139,13 @@ class SnakeEnv:
 
         self.snake.move(comm)
         if check_on_wall(self.snake, [1, 1, 38, 28]) or check_on_itself(self.snake):
-
             self.game_grid = self.generate_grid()
 
         if check_on_itself(self.snake):
             self.game_grid = self.generate_grid()
 
         if check_eat_apple(self.snake, self.apple):
-            self.apple = self.get_apple()
+            self.apple = self.get_apple(self.game_grid)
             self.increase()
-        
+
         self.update_grid()

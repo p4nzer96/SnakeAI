@@ -6,7 +6,7 @@ class Snake:
 
     def __init__(self, head_x, head_y, length, orientation) -> None:
 
-        self.blocks = np.ndarray(shape=(3, 2), dtype='int')
+        self.blocks = np.ndarray(shape=(length, 2), dtype='int')
 
         if  orientation == "up":
             
