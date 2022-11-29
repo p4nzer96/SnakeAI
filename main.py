@@ -1,34 +1,24 @@
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.colors import ListedColormap
+import tkinter as tk
 import numpy as np
-
+from gui import SnakeGui
 from snake_env import SnakeEnv
-from tqdm import tqdm
 
-fig, ax = plt.subplots()
 
-ims = []
+def call_step():
+    env.step()
+    snake_pos = np.multiply(env.snake.blocks, 20) + 8
+    apple_pos = np.multiply(env.apple.position, 20) + 8
+    board.move_snake(snake_pos, apple_pos)
+    root.after(50, call_step)
+
 
 env = SnakeEnv()
 
-image = np.zeros(shape=(30, 40, 3))
+root = tk.Tk()
+root.title("Snake")
+root.resizable(False, False)
+root.tk.call("tk", "scaling", 4.0)
+board = SnakeGui(env.snake.blocks, env.apple.position, env.wall)
 
-for i in tqdm(range(500)):
-
-    try:
-
-        env.step()
-
-        cmap = ListedColormap(["black", "red", "#33cc33", "#66ff66", "#0066ff"])
-        im = ax.imshow(env.game_grid, cmap=cmap, animated=True)
-        ims.append([im])
-
-    except Exception as e:
-
-        print(e)
-        break
-
-ani = animation.ArtistAnimation(fig, ims, interval=40, blit=True, repeat=True)
-
-plt.show()
+call_step()
+root.mainloop()

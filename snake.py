@@ -1,6 +1,7 @@
 from copy import copy
-from random import seed
+
 import numpy as np
+
 
 class Snake:
 
@@ -8,21 +9,21 @@ class Snake:
 
         self.blocks = np.ndarray(shape=(length, 2), dtype='int')
 
-        if  orientation == "up":
-            
+        if orientation == "up":
+
             self.blocks[:, 0] = head_x
             self.blocks[:, 1] = np.arange(head_y, head_y + length)
 
         elif orientation == "down":
-            
+
             self.blocks[:, 0] = head_x
             self.blocks[:, 1] = np.arange(head_y, head_y - length, -1)
 
         elif orientation == "right":
-            
+
             self.blocks[:, 0] = np.arange(head_x, head_x - length, -1)
             self.blocks[:, 1] = head_y
-            
+
         elif orientation == "left":
 
             self.blocks[:, 0] = np.arange(head_x, head_x + length)
@@ -31,9 +32,9 @@ class Snake:
         self.length = self.blocks.shape[0]
         self.direction = orientation
 
-    def move(self, direction):
+    def move(self, direction, simulate=False):
 
-        comp_dirs = {"up": "down", "down": "up", "right" : "left", "left" : "right"}
+        comp_dirs = {"up": "down", "down": "up", "right": "left", "left": "right"}
 
         if comp_dirs.get(self.direction) == direction:
             direction = self.direction
@@ -56,11 +57,21 @@ class Snake:
             delta_x = -1
             delta_y = 0
 
-        temp_vec = copy(self.blocks)
-        self.blocks[1:, :] = temp_vec[:-1, :]
-        self.blocks[0, 0] += delta_x  
-        self.blocks[0, 1] += delta_y
+        if simulate is False:
 
-    def increase(self, x, y):
-        tail = [x, y]
+            self.blocks[1:, :] = self.blocks[:-1, :]
+            self.blocks[0, 0] += delta_x
+            self.blocks[0, 1] += delta_y
+
+        else:
+
+            new_vec = copy(self.blocks)
+            new_vec[1:, :] = self.blocks[:-1, :]
+            new_vec[0, 0] += delta_x
+            new_vec[0, 1] += delta_y
+
+            return new_vec
+
+    def increase(self):
+        tail = self.blocks[-1]
         self.blocks = np.vstack([self.blocks, tail])
