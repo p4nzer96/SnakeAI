@@ -1,5 +1,4 @@
 import random
-import logging
 import numpy as np
 from ai_module import greedy_search
 from apple import Apple
@@ -24,53 +23,61 @@ class SnakeEnv:
         self.apple = None
         self.wall = None
 
-        self.game_grid = self.initialize_grid()
+        self._initialize_grid()
 
         self.direction = None
 
-    def initialize_grid(self):
+    @property
+    def snake_blocks(self):
+        return self.snake.blocks
 
-        grid = np.zeros(shape=(self.y_grid, self.x_grid))
+    @property
+    def snake_tail(self):
+        return self.snake.blocks[1, :]
 
-        # Defining the walls
+    @property
+    def snake_head(self):
+        return self.snake.blocks[0, :]
 
-        grid[0, :] = WALL_VALUE
-        grid[self.y_grid - 1, :] = WALL_VALUE
-        grid[:, 0] = WALL_VALUE
-        grid[:, self.x_grid - 1] = WALL_VALUE
+    @property
+    def apple_pos(self):
+        return self.apple.position
 
-        self.wall = np.argwhere(grid == WALL_VALUE)
-        self.wall[:, [0, 1]] = self.wall[:, [1, 0]]
+    @property
+    def wall_pos(self):
+        return self.wall
+
+    def _initialize_grid(self):
 
         # Getting a random orientation for snake initialization
 
-        orientation = ["up", "down", "right", "left"]
-        random.shuffle(orientation)
+        self.game_grid = self._get_grid()
 
         # Defining the snake
 
-        self.snake = self.get_snake(orientation)
+        self.snake = self._get_snake()
 
         # Updating the grid with snake locations
 
         for i, (x, y) in enumerate(self.snake.blocks):
-            grid[y, x] = HEAD_VALUE if i == 0 else SNAKE_VALUE
+            self.game_grid[y, x] = HEAD_VALUE if i == 0 else SNAKE_VALUE
 
         # Defining the apple
 
-        self.apple = self.get_apple(grid)
+        self.apple = self._get_apple(self.game_grid)
 
         # Updating the grid with apple location
 
         x, y = self.apple.position
-        grid[y, x] = APPLE_VALUE
+        self.game_grid[y, x] = APPLE_VALUE
 
-        return grid
-
-    def get_snake(self, orientations):
+    def _get_snake(self):
 
         s_length = 3
         offset = s_length + 1
+
+        orientations = ["up", "down", "right", "left"]
+        random.shuffle(orientations)
 
         head_x, head_y = [random.randint(offset, self.x_grid - offset - 1),
                           random.randint(offset, self.y_grid - offset - 1)]
@@ -79,7 +86,7 @@ class SnakeEnv:
 
         return snake
 
-    def get_apple(self, grid=None):
+    def _get_apple(self, grid=None):
 
         if grid is None:
             grid = self.game_grid
@@ -92,7 +99,24 @@ class SnakeEnv:
 
         return Apple(x, y)
 
-    def update_grid(self):
+    def _get_grid(self, g_type="default"):
+
+        grid = np.zeros(shape=(self.y_grid, self.x_grid))
+
+        # Setting wall positions
+
+        if g_type == "default":
+            grid[0, :] = WALL_VALUE
+            grid[self.y_grid - 1, :] = WALL_VALUE
+            grid[:, 0] = WALL_VALUE
+            grid[:, self.x_grid - 1] = WALL_VALUE
+
+        self.wall = np.argwhere(grid == WALL_VALUE)
+        self.wall[:, [0, 1]] = self.wall[:, [1, 0]]
+
+        return grid
+
+    def _update_grid(self):
 
         self.game_grid.fill(0)
 
@@ -119,10 +143,10 @@ class SnakeEnv:
         self.snake.move(comm)
 
         if check_on_wall(self.snake, [1, 1, 38, 28]) or check_on_itself(self.snake):
-            self.game_grid = self.initialize_grid()
+            self._initialize_grid()
 
         if check_eat_apple(self.snake, self.apple):
-            self.apple = self.get_apple()
+            self.apple = self._get_apple()
             self.snake.increase()
 
-        self.update_grid()
+        self._update_grid()

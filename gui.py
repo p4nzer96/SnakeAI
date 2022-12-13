@@ -7,8 +7,7 @@ from PIL import Image, ImageTk
 class SnakeGui(tk.Canvas):
     def __init__(self, snake_pos, apple_pos, wall_pos):
         super().__init__(
-            width=800, height=600, background="black", highlightthickness=0, border=2
-        )
+            width=840, height=680, background="black", highlightthickness=0)
 
         self.wall = None
         self.wall_image = None
