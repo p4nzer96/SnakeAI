@@ -1,20 +1,15 @@
 import random
 import numpy as np
-from ai_module import greedy_search
 from apple import Apple
 from rules_checker import check_on_itself, check_on_wall, check_eat_apple
 
 from snake import Snake
-
-WALL_VALUE = 255
-HEAD_VALUE = 200
-SNAKE_VALUE = 150
-APPLE_VALUE = 100
+from utils import HEAD_VALUE, WALL_VALUE, SNAKE_VALUE, APPLE_VALUE
 
 
 class SnakeEnv:
 
-    def __init__(self, dim_x=40, dim_y=30):
+    def __init__(self, dim_x=30, dim_y=30):
 
         self.x_grid = dim_x
         self.y_grid = dim_y
@@ -130,22 +125,14 @@ class SnakeEnv:
 
         self.game_grid[self.apple.position[1], self.apple.position[0]] = APPLE_VALUE
 
-    def step(self, mode='greedy'):
+    def step(self, command):
 
-        if mode == 'greedy':
+        self.snake.move(command)
 
-            comm = greedy_search(self)
-
-        elif mode == 'net':
-
-            raise NotImplementedError
-
-        self.snake.move(comm)
-
-        if check_on_wall(self.snake, [1, 1, 38, 28]) or check_on_itself(self.snake):
+        if check_on_wall(self) or check_on_itself(self):
             self._initialize_grid()
 
-        if check_eat_apple(self.snake, self.apple):
+        if check_eat_apple(self):
             self.apple = self._get_apple()
             self.snake.increase()
 

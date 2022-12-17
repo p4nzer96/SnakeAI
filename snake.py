@@ -2,7 +2,6 @@ from copy import copy
 
 import numpy as np
 
-
 class Snake:
 
     def __init__(self, head_x, head_y, length, orientation) -> None:
@@ -32,6 +31,18 @@ class Snake:
         self.length = self.blocks.shape[0]
         self.direction = orientation
 
+    @property
+    def head(self):
+        return self.blocks[0, :]
+
+    @property
+    def tail(self):
+        return self.blocks[1:]
+
+    @property
+    def body(self):
+        return self.blocks
+
     def move(self, direction, simulate=False):
 
         comp_dirs = {"up": "down", "down": "up", "right": "left", "left": "right"}
@@ -39,23 +50,26 @@ class Snake:
         if comp_dirs.get(self.direction) == direction:
             direction = self.direction
         else:
-            self.direction = direction
+            if not simulate:
+                self.direction = direction
 
         if direction == "up":
             delta_x = 0
             delta_y = -1
 
-        if direction == "down":
+        elif direction == "down":
             delta_x = 0
             delta_y = 1
 
-        if direction == "right":
+        elif direction == "right":
             delta_x = 1
             delta_y = 0
 
-        if direction == "left":
+        elif direction == "left":
             delta_x = -1
             delta_y = 0
+        else:
+            raise ValueError("Unknown direction")
 
         if simulate is False:
 
