@@ -1,29 +1,52 @@
 import random
 import numpy as np
 from apple import Apple
+from snake import Snake
+from collections import deque
 from rules_checker import check_on_itself, check_on_wall, check_eat_apple
 
-from snake import Snake
-from utils import HEAD_VALUE, WALL_VALUE, SNAKE_VALUE, APPLE_VALUE
+from consts import *
 
 
 class SnakeEnv:
 
-    def __init__(self, dim_x=30, dim_y=30):
+    def __init__(self, dim_x, dim_y):
 
-        self.x_grid = dim_x
-        self.y_grid = dim_y
+        # Environment dimensions
+
+        self._x_grid = dim_x
+        self._y_grid = dim_y
+
+        # Environment elements
 
         self.snake = None
         self.apple = None
         self.wall = None
 
+        self.event_pool = deque(maxlen=5)  # Creating an event queue (FIFO) with maximum size of 5
+
+        # Initializing the environment
+
         self._initialize_grid()
 
-        self.direction = None
+    @property
+    def dim_x(self):
+        return self._x_grid
 
     @property
-    def snake_blocks(self):
+    def dim_y(self):
+        return self._y_grid
+
+    @property
+    def dim_x_play(self):
+        return self._x_grid - 2
+
+    @property
+    def dim_y_play(self):
+        return self._y_grid - 2
+
+    @property
+    def snake_body(self):
         return self.snake.blocks
 
     @property
@@ -41,6 +64,10 @@ class SnakeEnv:
     @property
     def wall_pos(self):
         return self.wall
+    
+    @property
+    def last_event(self):
+        return self.event_pool[-1]
 
     def _initialize_grid(self):
 
@@ -74,8 +101,8 @@ class SnakeEnv:
         orientations = ["up", "down", "right", "left"]
         random.shuffle(orientations)
 
-        head_x, head_y = [random.randint(offset, self.x_grid - offset - 1),
-                          random.randint(offset, self.y_grid - offset - 1)]
+        head_x, head_y = [random.randint(offset, self._x_grid - offset - 1),
+                          random.randint(offset, self._y_grid - offset - 1)]
 
         snake = Snake(head_x, head_y, length=s_length, orientation=orientations[0])
 
@@ -86,9 +113,10 @@ class SnakeEnv:
         if grid is None:
             grid = self.game_grid
 
-        # we grab the indexes of the ones
+        # we grab the positions not occupied by the snake
         y_list, x_list = np.where(grid == 0)
-        # we chose one index randomly
+
+        # we chose one position randomly
         i = np.random.choice(len(x_list))
         x, y = [x_list[i], y_list[i]]
 
@@ -96,15 +124,15 @@ class SnakeEnv:
 
     def _get_grid(self, g_type="default"):
 
-        grid = np.zeros(shape=(self.y_grid, self.x_grid))
+        grid = np.zeros(shape=(self._y_grid, self._x_grid))
 
         # Setting wall positions
 
         if g_type == "default":
             grid[0, :] = WALL_VALUE
-            grid[self.y_grid - 1, :] = WALL_VALUE
+            grid[self._y_grid - 1, :] = WALL_VALUE
             grid[:, 0] = WALL_VALUE
-            grid[:, self.x_grid - 1] = WALL_VALUE
+            grid[:, self._x_grid - 1] = WALL_VALUE
 
         self.wall = np.argwhere(grid == WALL_VALUE)
         self.wall[:, [0, 1]] = self.wall[:, [1, 0]]
@@ -113,12 +141,9 @@ class SnakeEnv:
 
     def _update_grid(self):
 
-        self.game_grid.fill(0)
+        # reset game grid
 
-        self.game_grid[0, :] = 255
-        self.game_grid[self.y_grid - 1, :] = 255
-        self.game_grid[:, 0] = 255
-        self.game_grid[:, self.x_grid - 1] = 255
+        self.game_grid = self._get_grid()
 
         for i, (x, y) in enumerate(self.snake.blocks):
             self.game_grid[y, x] = HEAD_VALUE if i == 0 else SNAKE_VALUE
@@ -130,10 +155,14 @@ class SnakeEnv:
         self.snake.move(command)
 
         if check_on_wall(self) or check_on_itself(self):
+            self.event_pool.append(DEATH)
             self._initialize_grid()
 
-        if check_eat_apple(self):
+        elif check_eat_apple(self):
             self.apple = self._get_apple()
             self.snake.increase()
+            self.event_pool.append(GOAL)
+        else:
+            self.event_pool.append(STEP)
 
         self._update_grid()

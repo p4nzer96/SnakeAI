@@ -1,17 +1,21 @@
 import tkinter as tk
-import numpy as np
 
 from agent import Agent
+from agent_h import AgentH
 from gui import SnakeGui
 from snake_env import SnakeEnv
+from consts import DEATH
 
 
 def call_step():
+    try:
+        if env.last_event == DEATH:
+            agent.reset()
+    except IndexError:
+        pass
     agent.step()
-    snake_pos = np.multiply(env.snake.blocks, 20) + 8
-    apple_pos = np.multiply(env.apple.position, 20) + 8
-    board.move_snake(snake_pos, apple_pos)
-    root.after(5, call_step)
+    board.move_snake(env)
+    root.after(20, call_step)
 
 
 mode = "gui"
@@ -20,12 +24,13 @@ if __name__ == "__main__":
 
     if mode == "gui":
 
-        env = SnakeEnv()
-        agent = Agent(env, "bfs")
+        env = SnakeEnv(30, 30)
 
+        #agent = Agent(env, mode="bfs")
+        agent = AgentH(env)
         root = tk.Tk()
-        w = env.x_grid * 20  # Width
-        h = env.y_grid * 20  # Height
+        w = env.dim_y * 20  # Width
+        h = env.dim_y * 20  # Height
 
         screen_width = root.winfo_screenwidth()  # Width of the screen
         screen_height = root.winfo_screenheight()  # Height of the screen

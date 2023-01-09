@@ -3,6 +3,9 @@ import tkinter as tk
 import numpy as np
 from PIL import Image, ImageTk
 
+from consts import *
+from snake_env import SnakeEnv
+
 
 class SnakeGui(tk.Canvas):
     def __init__(self, snake_pos, apple_pos, wall_pos):
@@ -58,19 +61,18 @@ class SnakeGui(tk.Canvas):
 
         self.create_text(100, 35, text="Score: {}".format(self.snake_len - 3), font=10, fill="#fff", tags="score")
 
-    def move_snake(self, snake_pos, apple_pos):
+    def move_snake(self, env: SnakeEnv):
 
-        self.snake_positions = snake_pos
-        self.apple_position = apple_pos
+        self.snake_positions = np.multiply(env.snake.blocks, 20) + 8
+        self.apple_position = np.multiply(env.apple.position, 20) + 8
+        if env.last_event == GOAL:
+            self.create_image(env.snake_body[0, -1], env.snake_body[0, -1], image=self.snake_body, tag="snake")
+        elif env.last_event == DEATH:
+            self.delete("all")
+            self.create_objects()
 
-        if snake_pos.shape[0] != self.snake_len:
-            if snake_pos.shape[0] >= self.snake_len:
-                self.create_image(snake_pos[0, -1], snake_pos[0, -1], image=self.snake_body, tag="snake")
-            elif snake_pos.shape[0] < self.snake_len:
-                self.delete("all")
-                self.create_objects()
-            self.snake_len = snake_pos.shape[0]
-            self.itemconfigure("score", text=f"Score: {self.snake_len - 3}", tag="score")
+        self.snake_len = env.snake.blocks.shape[0]
+        self.itemconfigure("score", text=f"Score: {self.snake_len - 3}", tag="score")
 
         snake_head_pos = self.snake_positions[0]
         snake_tail_pos = self.snake_positions[1:]

@@ -1,12 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
 from rules_checker import check_on_wall, check_on_itself, check_eat_apple
+from consts import *
+
+# Complementary directions
 
 comp_dirs = {"up": "down", "down": "up", "right": "left", "left": "right"}
+
+# Translate position to deltas
+
 next_pos = {"up": lambda x, y: [x, y - 1], "down": lambda x, y: [x, y + 1],
             "left": lambda x, y: [x - 1, y], "right": lambda x, y: [x + 1, y]}
 
+
+# Converts set of positions to the corresponding move direction
 
 def coord_dir_conv(initial, final):
     for key in next_pos.keys():
@@ -14,19 +21,19 @@ def coord_dir_conv(initial, final):
             return key
 
 
+# Converts a pair of coordinates into a single coordinate
+
 def translate(x, y, grid_y):
     return y * grid_y + x
 
+
+# Converts a single coordinate into a pair of coordinates
 
 def translate_back(i, grid_y):
     return i % grid_y, int(i / grid_y)
 
 
-WALL_VALUE = 255
-HEAD_VALUE = 200
-SNAKE_VALUE = 150
-APPLE_VALUE = 100
-
+# Computes the overall direction of the snake
 
 def get_ovr_dir(snake):
     head_x, head_y = snake.blocks[0]
@@ -34,24 +41,14 @@ def get_ovr_dir(snake):
 
     if abs(head_x - tail_x) > abs(head_y - tail_y):
 
-        if head_x - tail_x > 0:
-
-            return "right"
-
-        else:
-
-            return "left"
+        return "right" if (head_x - tail_x > 0) else "left"
 
     else:
 
-        if head_y - tail_y > 0:
+        return "down" if (head_y - tail_y > 0) else "up"
 
-            return "down"
 
-        else:
-
-            return "up"
-
+# Simulates the snake movement without updating the environment
 
 def simulate_step(env, command):
     status = None
@@ -73,6 +70,8 @@ def simulate_step(env, command):
 
     return new_grid, status
 
+
+# Simulates snake's multiple movement without updating the environment
 
 def simulate_step_series(env, command):
     status = None

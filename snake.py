@@ -1,6 +1,6 @@
-from copy import copy
-
 import numpy as np
+from utils import comp_dirs
+
 
 class Snake:
 
@@ -28,7 +28,6 @@ class Snake:
             self.blocks[:, 0] = np.arange(head_x, head_x + length)
             self.blocks[:, 1] = head_y
 
-        self.length = self.blocks.shape[0]
         self.direction = orientation
 
     @property
@@ -43,16 +42,19 @@ class Snake:
     def body(self):
         return self.blocks
 
-    def move(self, direction, simulate=False):
+    @property
+    def length(self):
+        return self.blocks.shape[0]
 
-        comp_dirs = {"up": "down", "down": "up", "right": "left", "left": "right"}
+    def move(self, direction):
+        # If the move direction is equal to the complementary direction (e.g. down when the snake is moving up),
+        # then keep the previous direction
 
-        if comp_dirs.get(self.direction) == direction:
-            direction = self.direction
+        if comp_dirs.get(self.direction) != direction:
+            self.direction = direction
         else:
-            if not simulate:
-                self.direction = direction
-
+            direction = self.direction
+        # Set the movement deltas for each direction
         if direction == "up":
             delta_x = 0
             delta_y = -1
@@ -71,20 +73,13 @@ class Snake:
         else:
             raise ValueError("Unknown direction")
 
-        if simulate is False:
+        # Update the snake's blocks
 
-            self.blocks[1:, :] = self.blocks[:-1, :]
-            self.blocks[0, 0] += delta_x
-            self.blocks[0, 1] += delta_y
+        self.blocks[1:, :] = self.blocks[:-1, :]
+        self.blocks[0, 0] += delta_x
+        self.blocks[0, 1] += delta_y
 
-        else:
-
-            new_vec = copy(self.blocks)
-            new_vec[1:, :] = self.blocks[:-1, :]
-            new_vec[0, 0] += delta_x
-            new_vec[0, 1] += delta_y
-
-            return new_vec
+    # Increase the snake
 
     def increase(self):
         tail = self.blocks[-1]

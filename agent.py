@@ -1,7 +1,7 @@
 import numpy as np
 
-from utils import comp_dirs, HEAD_VALUE, WALL_VALUE, SNAKE_VALUE, coord_dir_conv
-from utils import simulate_step, next_pos
+from utils import comp_dirs, coord_dir_conv, simulate_step, next_pos
+from consts import *
 
 
 def get_cost(env, direction, size=3):
@@ -26,8 +26,7 @@ def get_cost(env, direction, size=3):
 
     for x in x_coords:
         for y in y_coords:
-
-            if x > env.x_grid or y > env.y_grid:
+            if x > env.dim_x or y > env.dim_y:
                 continue
 
             if grid[y, x] == WALL_VALUE or grid[y, x]:
@@ -69,13 +68,11 @@ def greedy_search(env):
     # Snake orientation
     direction = env.snake.direction
 
+    # Head and apple position
     s_x, s_y = snake.head
     a_x, a_y = apple.position
 
     poss_moves = ["up", "down", "right", "left"]
-
-    next_pos = {"up": (s_x, s_y - 1), "down": (s_x, s_y + 1),
-                "left": (s_x - 1, s_y), "right": (s_x + 1, s_y)}
 
     actions = {}
     action_list = []
@@ -99,12 +96,10 @@ def greedy_search(env):
         direction = selected_action
 
         action_list.append(selected_action)
-        positions.insert(0, list(next_pos.get(selected_action)))
+        positions.insert(0, list(next_pos.get(selected_action)(s_x, s_y)))
         positions.pop(-1)
 
-        print(s_x, s_y)
-
-        s_x, s_y = next_pos.get(selected_action)
+        s_x, s_y = next_pos.get(selected_action)(s_x, s_y)
 
         if (s_x == a_x and s_y == a_y) or [s_x, s_y] in walls.tolist() or [s_x, s_y] in positions[1:]:
             return action_list
@@ -116,30 +111,41 @@ def bfs(env):
 
     # maintain a queue of paths
     queue = [[root]]
-    # push the first path into the queue
 
+    # push the first path into the queue
     visited = env.snake.body.tolist()
 
     dirs = []
     while queue:
+
         # get the first path from the queue
         path = queue.pop(0)
         # get the last node from the path
         node = list(path)[-1]
+
         # path found
         if node == goal:
             for i in range(len(path) - 1):
                 dirs.append(coord_dir_conv(path[i], path[i + 1]))
             return dirs
-        # enumerate all adjacent nodes, construct a
-        # new path and push it into the queue
+
+        # explore the adjacent nodes
         adjacent = explore(node)
+
+        # for every adjacent node
         for adj in adjacent:
+            # if the node has been visited, continue to next iteration
             if adj in visited:
                 continue
+
+            # append the current node to the list of visited nodes
             visited.append(adj)
+
+            # update path
             new_path = list(path)
             new_path.append(adj)
+
+            # update queue
             queue.append(new_path)
 
 
@@ -185,29 +191,36 @@ def a_star_search(env):
         if (s_x == a_x and s_y == a_y) or [s_x, s_y] in walls.tolist() or [s_x, s_y] in positions:
             return action_list
 
-
 class Agent:
 
     def __init__(self, env, mode="gbfs"):
-        self.environment = env
-        self.comm_queue = None
-        self.mode = mode
+        self.environment = env  # Attach the agent to an existing environment
+        self.comm_queue = None  # Queue of commands
+        self.mode = mode  # Algorithm used
 
     def step(self):
 
         if not self.comm_queue:
 
+            # Greedy Best First Search
+
             if self.mode == "gbfs":
                 self.comm_queue = greedy_search(self.environment)
 
+            # A Star Search TODO: see if makes sense to maintain this algorithm
+
             elif self.mode == "a_star":
                 self.comm_queue = a_star_search(self.environment)
+
+            # Breadth First Search
 
             elif self.mode == "bfs":
                 self.comm_queue = bfs(self.environment)
 
             else:
                 raise ValueError("Unknown mode")
+
+        # If the queue is still empty (i.e. no solution was found, keep the current direction)
 
         try:
             comm = self.comm_queue.pop(0)
@@ -216,3 +229,6 @@ class Agent:
             comm = self.environment.snake.direction
 
         self.environment.step(comm)
+
+    def reset(self):
+        self.comm_queue = None  # Queue of commands
