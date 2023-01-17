@@ -15,7 +15,7 @@ def call_step():
         pass
     agent.step()
     board.move_snake(env)
-    root.after(20, call_step)
+    root.after(5, call_step)
 
 
 mode = "gui"
