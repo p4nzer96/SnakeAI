@@ -23,6 +23,8 @@ class SnakeEnv:
         self.apple = None
         self.wall = None
 
+        self.game_grid = None
+
         self.event_pool = deque(maxlen=5)  # Creating an event queue (FIFO) with maximum size of 5
 
         # Initializing the environment

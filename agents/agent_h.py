@@ -152,7 +152,6 @@ class AgentH:
             self.path = deque(list(path))
             self.path.rotate(-np.where(np.all(self.environment.snake.head == path, axis=1))[0][0])
             self.environment.step(comm)
-            print(comm)
             self.path.rotate(-1)
         else:
             comm = coord_dir_conv(list(self.path[0]), list(self.path[1]))

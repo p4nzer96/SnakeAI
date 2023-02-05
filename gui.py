@@ -31,7 +31,10 @@ class SnakeGui(tk.Canvas):
 
         self.pack()
 
+    # Loading the assets
+
     def load_assets(self):
+
         self.snake_head_image = Image.open("./assets/snake_head.png")
         self.snake_head = ImageTk.PhotoImage(self.snake_head_image)
 
@@ -59,7 +62,7 @@ class SnakeGui(tk.Canvas):
 
         self.create_image(*self.apple_position, image=self.apple, tag="apple")
 
-        self.create_text(100, 35, text="Score: {}".format(self.snake_len - 3), font=10, fill="#fff", tags="score")
+        self.create_text(100, 10, text="Score: {}".format(self.snake_len - 3), font=10, fill="#fff", tags="score")
 
     def move_snake(self, env: SnakeEnv):
 

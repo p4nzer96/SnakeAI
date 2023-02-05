@@ -1,5 +1,8 @@
+from abc import ABCMeta, abstractmethod
+
 import numpy as np
 
+from agents.agent import Agent
 from utils import comp_dirs, coord_dir_conv, simulate_step, next_pos
 from consts import *
 
@@ -105,6 +108,58 @@ def greedy_search(env):
             return action_list
 
 
+def dfs(env):
+    root = env.snake.head.tolist()
+    goal = env.apple.position.tolist()
+
+    queue = [[root]]
+
+    visited = env.snake.body.tolist()
+
+    dirs = []
+
+    while queue:
+        root = env.snake.head.tolist()
+        goal = env.apple.position.tolist()
+
+        # maintain a queue of paths
+        queue = [[root]]
+
+        # push the first path into the queue
+        visited = env.snake.body.tolist()
+
+        dirs = []
+        while queue:
+
+            # get the first path from the queue
+            path = queue.pop(0)
+            # get the last node from the path
+            node = list(path)[-1]
+
+            # path found
+            if node == goal:
+                for i in range(len(path) - 1):
+                    dirs.append(coord_dir_conv(path[i], path[i + 1]))
+                return dirs
+
+            # explore the adjacent nodes
+            adjacent = explore(node)
+
+            # for every adjacent node
+            for adj in adjacent:
+                # if the node has been visited, continue to next iteration
+                if adj not in visited:
+                    # append the current node to the list of visited nodes
+                    visited.append(adj)
+
+                    # update path
+                    new_path = list(path)
+                    new_path.append(adj)
+
+                    # update queue
+                    queue.insert(0, new_path)
+
+
 def bfs(env):
     root = env.snake.head.tolist()
     goal = env.apple.position.tolist()
@@ -135,18 +190,16 @@ def bfs(env):
         # for every adjacent node
         for adj in adjacent:
             # if the node has been visited, continue to next iteration
-            if adj in visited:
-                continue
+            if adj not in visited:
+                # append the current node to the list of visited nodes
+                visited.append(adj)
 
-            # append the current node to the list of visited nodes
-            visited.append(adj)
+                # update path
+                new_path = list(path)
+                new_path.append(adj)
 
-            # update path
-            new_path = list(path)
-            new_path.append(adj)
-
-            # update queue
-            queue.append(new_path)
+                # update queue
+                queue.append(new_path)
 
 
 def a_star_search(env):
@@ -191,10 +244,11 @@ def a_star_search(env):
         if (s_x == a_x and s_y == a_y) or [s_x, s_y] in walls.tolist() or [s_x, s_y] in positions:
             return action_list
 
-class Agent:
+
+class AgentTS(Agent):
 
     def __init__(self, env, mode="gbfs"):
-        self.environment = env  # Attach the agent to an existing environment
+        super().__init__(env)
         self.comm_queue = None  # Queue of commands
         self.mode = mode  # Algorithm used
 
@@ -216,6 +270,9 @@ class Agent:
 
             elif self.mode == "bfs":
                 self.comm_queue = bfs(self.environment)
+
+            elif self.mode == "dfs":
+                self.comm_queue = dfs(self.environment)
 
             else:
                 raise ValueError("Unknown mode")

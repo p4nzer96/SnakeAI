@@ -1,7 +1,7 @@
 import tkinter as tk
 
-from agent import Agent
-from agent_h import AgentH
+from agents.agent_h import AgentH
+from agents.agent_ts import AgentTS
 from gui import SnakeGui
 from snake_env import SnakeEnv
 from consts import DEATH
@@ -26,8 +26,8 @@ if __name__ == "__main__":
 
         env = SnakeEnv(30, 30)
 
-        #agent = Agent(env, mode="bfs")
-        agent = AgentH(env)
+        agent = AgentTS(env, mode="dfs")
+        #agent = AgentH(env)
         root = tk.Tk()
         w = env.dim_y * 20  # Width
         h = env.dim_y * 20  # Height
