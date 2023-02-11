@@ -1,3 +1,4 @@
+import copy
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
@@ -119,45 +120,34 @@ def dfs(env):
     dirs = []
 
     while queue:
-        root = env.snake.head.tolist()
-        goal = env.apple.position.tolist()
 
-        # maintain a queue of paths
-        queue = [[root]]
+        # get the first path from the queue
+        path = queue.pop(0)
+        # get the last node from the path
+        node = list(path)[-1]
 
-        # push the first path into the queue
-        visited = env.snake.body.tolist()
+        # path found
+        if node == goal:
+            for i in range(len(path) - 1):
+                dirs.append(coord_dir_conv(path[i], path[i + 1]))
+            return dirs
 
-        dirs = []
-        while queue:
+        # explore the adjacent nodes
+        adjacent = explore(node)
 
-            # get the first path from the queue
-            path = queue.pop(0)
-            # get the last node from the path
-            node = list(path)[-1]
+        # for every adjacent node
+        for adj in adjacent:
+            # if the node has been visited, continue to next iteration
+            if adj not in visited:
+                # append the current node to the list of visited nodes
+                visited.append(adj)
 
-            # path found
-            if node == goal:
-                for i in range(len(path) - 1):
-                    dirs.append(coord_dir_conv(path[i], path[i + 1]))
-                return dirs
+                # update path
+                new_path = list(path)
+                new_path.append(adj)
 
-            # explore the adjacent nodes
-            adjacent = explore(node)
-
-            # for every adjacent node
-            for adj in adjacent:
-                # if the node has been visited, continue to next iteration
-                if adj not in visited:
-                    # append the current node to the list of visited nodes
-                    visited.append(adj)
-
-                    # update path
-                    new_path = list(path)
-                    new_path.append(adj)
-
-                    # update queue
-                    queue.insert(0, new_path)
+                # update queue
+                queue.insert(0, new_path)
 
 
 def bfs(env):
@@ -200,6 +190,86 @@ def bfs(env):
 
                 # update queue
                 queue.append(new_path)
+
+
+def bidirectional(env):
+    def join_paths(listA, listB, common):
+
+        output = []
+
+        for x in listA:
+            output.append(x)
+            if x == common:
+                break
+        temp_list = []
+        for x in listB:
+            if x == common:
+                break
+            temp_list.append(x)
+
+        temp_list.reverse()
+
+        output = output + temp_list
+
+        return output
+
+    root = env.snake.head.tolist()
+    goal = env.apple.position.tolist()
+
+    # maintain a queue of paths
+    f_queue = [[root]]
+    b_queue = [[goal]]
+
+    # push the first path into the queue
+    f_visited = env.snake.body.tolist()
+    b_visited = []
+    dirs = []
+    while f_queue and b_queue:
+
+        # get the first path from the queue
+        f_path = f_queue.pop(0)
+        b_path = b_queue.pop(0)
+
+        for c in f_path:
+            if c in b_path:
+                path = join_paths(f_path, b_path, c)
+                for i in range(len(path) - 1):
+                    dirs.append(coord_dir_conv(path[i], path[i + 1]))
+                return dirs
+
+        # get the last node from the path
+        f_node = list(f_path)[-1]
+        b_node = list(b_path)[-1]
+
+        # explore the adjacent nodes
+        f_adjacent = explore(f_node)
+        b_adjacent = explore(b_node)
+
+        # for every adjacent node
+        for adj in f_adjacent:
+            # if the node has been visited, continue to next iteration
+            if adj not in f_visited:
+                # append the current node to the list of visited nodes
+                f_visited.append(adj)
+                # update path
+                new_path = list(f_path)
+                new_path.append(adj)
+
+                # update queue
+                f_queue.append(new_path)
+        # for every adjacent node
+        for adj in b_adjacent:
+            # if the node has been visited, continue to next iteration
+            if adj not in b_visited:
+                # append the current node to the list of visited nodes
+                b_visited.append(adj)
+
+                # update path
+                new_path = list(b_path)
+                new_path.append(adj)
+
+                # update queue
+                b_queue.append(new_path)
 
 
 def a_star_search(env):
@@ -273,6 +343,9 @@ class AgentTS(Agent):
 
             elif self.mode == "dfs":
                 self.comm_queue = dfs(self.environment)
+
+            elif self.mode == "bdir":
+                self.comm_queue = bidirectional(self.environment)
 
             else:
                 raise ValueError("Unknown mode")

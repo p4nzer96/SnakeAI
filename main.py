@@ -19,6 +19,7 @@ def call_step():
 
 
 mode = "gui"
+algorithm = "bdir"
 
 if __name__ == "__main__":
 
@@ -26,8 +27,11 @@ if __name__ == "__main__":
 
         env = SnakeEnv(30, 30)
 
-        agent = AgentTS(env, mode="dfs")
-        #agent = AgentH(env)
+        if algorithm != "hamiltonian":
+            agent = AgentTS(env, mode=algorithm)
+        else:
+            agent = AgentH(env)
+
         root = tk.Tk()
         w = env.dim_y * 20  # Width
         h = env.dim_y * 20  # Height

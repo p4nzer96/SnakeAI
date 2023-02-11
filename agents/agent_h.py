@@ -1,17 +1,21 @@
 import numpy as np
 from copy import copy
+
+from agents.agent import Agent
 from utils import coord_dir_conv
 from collections import deque
 
 
 def check_ham_dir(path_x, path_y, snake):
-    head = snake.head
-    direction = snake.direction
-    x_result = None
-    y_result = None
+    head = snake.head  # snake's head
+    direction = snake.direction  # snake's current direction
+    x_result = None  # the snake is already following the hamiltonian x-path?
+    y_result = None  # the snake is already following the hamiltonian y-path?
 
-    x_reversed = None
-    y_reversed = None
+    x_reversed = None  # the snake is reversed with to respect to the standard hamiltonian x-path
+    y_reversed = None  # the snake is reversed with to respect to the standard hamiltonian x-path
+
+    # If a hamiltonian x-path exists
     if path_x is not None:
         if direction == "up":
             x_result = False
@@ -26,6 +30,7 @@ def check_ham_dir(path_x, path_y, snake):
             x_result = True
             x_reversed = (head[1] % 2 == 1)
 
+    # If a hamiltonian y-path exists
     if path_y is not None:
         if direction == "up":
             y_result = True
@@ -53,10 +58,12 @@ def check_ham_dir(path_x, path_y, snake):
             return None, None, None
 
 
+# compute the hamiltonian path
 def compute_hamiltonian(env):
-    path_y = []
-    path_x = []
+    path_y = []  # path with major orientation along y-axis
+    path_x = []  # path with major orientation along x-axis
 
+    # Building the hamiltonian y-path (if exists)
     if env.dim_x_play % 2 == 0:
         for x in range(1, env.dim_x - 1):
             if x % 2 == 1:
@@ -75,6 +82,7 @@ def compute_hamiltonian(env):
     else:
         path_y = None
 
+    # Building the hamiltonian x-path (if exists)
     if env.dim_y_play % 2 == 0:
         for y in range(1, env.dim_y - 1):
             if y % 2 == 1:
@@ -96,11 +104,13 @@ def compute_hamiltonian(env):
     return np.array(path_y), np.array(path_x)
 
 
+# seek snake to the correct position
 def seek_snake(path_x, path_y, env):
     snake = env.snake
     head_x, head_y = snake.head
     poss_dir, is_in_path, is_reversed = check_ham_dir(path_x, path_y, snake)
 
+    # the snake is already following a path?
     if is_in_path:
         next_move = snake.direction
         reverse = is_reversed
@@ -114,11 +124,12 @@ def seek_snake(path_x, path_y, env):
     return poss_dir, next_move, reverse
 
 
-class AgentH:
+# Hamiltonian Agent
+class AgentH(Agent):
     def __init__(self, env):
+        super().__init__(env)
         self.h_cycles_dict = dict()
         self.path = None
-        self.environment = env
         self.is_init = True
         self._get_h_cycles()
 
@@ -143,11 +154,14 @@ class AgentH:
         return self.h_cycles_dict.get("y")
 
     def step(self):
+
+        # Step to execute if the snake game is at its initial state
+        # Basically I'm seeking the snake to the path
         if self.is_init is True:
             self.is_init = False
             direction, comm, to_reverse = seek_snake(self.x_cycle, self.y_cycle, self.environment)
             path = copy(self.h_cycles_dict.get(direction))
-            if to_reverse:
+            if to_reverse:  # the path needs to be reversed?
                 path[1:] = np.flipud(path[1:])
             self.path = deque(list(path))
             self.path.rotate(-np.where(np.all(self.environment.snake.head == path, axis=1))[0][0])

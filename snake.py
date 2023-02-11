@@ -46,14 +46,15 @@ class Snake:
     def length(self):
         return self.blocks.shape[0]
 
-    def move(self, direction):
+    def move(self, direction, simulate=False):
+
         # If the move direction is equal to the complementary direction (e.g. down when the snake is moving up),
         # then keep the previous direction
-
         if comp_dirs.get(self.direction) != direction:
             self.direction = direction
         else:
             direction = self.direction
+
         # Set the movement deltas for each direction
         if direction == "up":
             delta_x = 0
@@ -73,14 +74,22 @@ class Snake:
         else:
             raise ValueError("Unknown direction")
 
-        # Update the snake's blocks
-
-        self.blocks[1:, :] = self.blocks[:-1, :]
-        self.blocks[0, 0] += delta_x
-        self.blocks[0, 1] += delta_y
+        if simulate is False:
+            # Update the snake's blocks
+            self.blocks[1:, :] = self.blocks[:-1, :]
+            self.blocks[0, 0] += delta_x
+            self.blocks[0, 1] += delta_y
+        else:
+            blocks = self.blocks
+            blocks[1:, :] = self.blocks[:-1, :]
+            blocks[0, 0] += delta_x
+            blocks[0, 1] += delta_y
+            return blocks
 
     # Increase the snake
-
-    def increase(self):
+    def increase(self, simulate=False):
         tail = self.blocks[-1]
-        self.blocks = np.vstack([self.blocks, tail])
+        if simulate is False:
+            self.blocks = np.vstack([self.blocks, tail])
+        else:
+            return np.vstack([self.blocks, tail])

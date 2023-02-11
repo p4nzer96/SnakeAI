@@ -13,12 +13,10 @@ class SnakeEnv:
     def __init__(self, dim_x, dim_y):
 
         # Environment dimensions
-
         self._x_grid = dim_x
         self._y_grid = dim_y
 
         # Environment elements
-
         self.snake = None
         self.apple = None
         self.wall = None
@@ -66,7 +64,7 @@ class SnakeEnv:
     @property
     def wall_pos(self):
         return self.wall
-    
+
     @property
     def last_event(self):
         return self.event_pool[-1]
@@ -74,24 +72,19 @@ class SnakeEnv:
     def _initialize_grid(self):
 
         # Getting a random orientation for snake initialization
-
         self.game_grid = self._get_grid()
 
         # Defining the snake
-
         self.snake = self._get_snake()
 
         # Updating the grid with snake locations
-
         for i, (x, y) in enumerate(self.snake.blocks):
             self.game_grid[y, x] = HEAD_VALUE if i == 0 else SNAKE_VALUE
 
         # Defining the apple
-
         self.apple = self._get_apple(self.game_grid)
 
         # Updating the grid with apple location
-
         x, y = self.apple.position
         self.game_grid[y, x] = APPLE_VALUE
 
@@ -124,18 +117,16 @@ class SnakeEnv:
 
         return Apple(x, y)
 
-    def _get_grid(self, g_type="default"):
+    def _get_grid(self):
 
+        # Initializing the grid
         grid = np.zeros(shape=(self._y_grid, self._x_grid))
 
         # Setting wall positions
+        grid[(0, self._y_grid - 1), :] = WALL_VALUE
+        grid[:, (0, self._x_grid - 1)] = WALL_VALUE
 
-        if g_type == "default":
-            grid[0, :] = WALL_VALUE
-            grid[self._y_grid - 1, :] = WALL_VALUE
-            grid[:, 0] = WALL_VALUE
-            grid[:, self._x_grid - 1] = WALL_VALUE
-
+        # Getting the wall positions
         self.wall = np.argwhere(grid == WALL_VALUE)
         self.wall[:, [0, 1]] = self.wall[:, [1, 0]]
 
@@ -143,8 +134,7 @@ class SnakeEnv:
 
     def _update_grid(self):
 
-        # reset game grid
-
+        # Resetting game grid
         self.game_grid = self._get_grid()
 
         for i, (x, y) in enumerate(self.snake.blocks):
@@ -152,14 +142,17 @@ class SnakeEnv:
 
         self.game_grid[self.apple.position[1], self.apple.position[0]] = APPLE_VALUE
 
+    # Executes a step  TODO: add integration to step_simulation
     def step(self, command):
 
         self.snake.move(command)
 
+        # The snake dies
         if check_on_wall(self) or check_on_itself(self):
             self.event_pool.append(DEATH)
             self._initialize_grid()
 
+        # The snake eats the apple
         elif check_eat_apple(self):
             self.apple = self._get_apple()
             self.snake.increase()
