@@ -47,6 +47,8 @@ class SnakeGui(tk.Canvas):
         self.wall_image = Image.open("./assets/wall_block.png")
         self.wall = ImageTk.PhotoImage(self.wall_image)
 
+    # Objects Creation
+
     def create_objects(self):
 
         snake_head_pos = self.snake_positions[0]
@@ -64,12 +66,14 @@ class SnakeGui(tk.Canvas):
 
         self.create_text(100, 10, text="Score: {}".format(self.snake_len - 3), font=10, fill="#fff", tags="score")
 
+    # Move the snake
+
     def move_snake(self, env: SnakeEnv):
 
         self.snake_positions = np.multiply(env.snake.blocks, 20) + 8
         self.apple_position = np.multiply(env.apple.position, 20) + 8
         if env.last_event == GOAL:
-            self.create_image(env.snake_body[0, -1], env.snake_body[0, -1], image=self.snake_body, tag="snake")
+            self.create_image(env.snake.body[0, -1], env.snake.body[0, -1], image=self.snake_body, tag="snake")
         elif env.last_event == DEATH:
             self.delete("all")
             self.create_objects()

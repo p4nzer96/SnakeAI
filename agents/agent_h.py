@@ -6,6 +6,7 @@ from utils import coord_dir_conv
 from collections import deque
 
 
+# Checks if the snake is already following a hamiltonian cycle
 def check_ham_dir(path_x, path_y, snake):
     head = snake.head  # snake's head
     direction = snake.direction  # snake's current direction
@@ -13,7 +14,7 @@ def check_ham_dir(path_x, path_y, snake):
     y_result = None  # the snake is already following the hamiltonian y-path?
 
     x_reversed = None  # the snake is reversed with to respect to the standard hamiltonian x-path
-    y_reversed = None  # the snake is reversed with to respect to the standard hamiltonian x-path
+    y_reversed = None  # the snake is reversed with to respect to the standard hamiltonian y-path
 
     # If a hamiltonian x-path exists
     if path_x is not None:
@@ -45,11 +46,11 @@ def check_ham_dir(path_x, path_y, snake):
             y_result = False
             y_reversed = None
 
-    if x_result is True:
+    if x_result is True:  # the snake is already following the hamiltonian path (along x)
         return "x", True, x_reversed
-    elif y_result is True:
+    elif y_result is True:  # the snake is already following the hamiltonian path (along y)
         return "y", True, y_reversed
-    else:
+    else:  # the snake is not following a hamiltonian cycle
         if path_x is not None:
             return "x", False, None
         elif path_y is not None:
@@ -58,44 +59,42 @@ def check_ham_dir(path_x, path_y, snake):
             return None, None, None
 
 
-# compute the hamiltonian path
+# Compute the hamiltonian cycle
 def compute_hamiltonian(env):
     path_y = []  # path with major orientation along y-axis
     path_x = []  # path with major orientation along x-axis
 
+    # Playable dimensions
+    x_play, y_play = env.dim_x_play, env.dim_y_play
+
+    # Board dimensions
+    x_dim, y_dim = env.dim_x, env.dim_y
+
     # Building the hamiltonian y-path (if exists)
-    if env.dim_x_play % 2 == 0:
-        for x in range(1, env.dim_x - 1):
-            if x % 2 == 1:
-                start = 2
-                end = env.dim_y - 1
-                step = 1
-            else:
-                start = env.dim_y - 2
-                end = 1
-                step = -1
-            for y in range(start, end, step):
+    if x_play % 2 == 0:  # Check if the playable environment has an even number of columns
+        for x in range(1, x_dim - 1):  # Cycle all columns not occupied by walls
+            if x % 2 == 1:  # If I'm on an odd column
+                start, end, step = 2, y_dim - 1, 1
+            else:  # If I'm on an even column
+                start, end, step = y_dim - 2, 1, -1
+            for y in range(start, end, step):  # Create path
                 path_y.append([x, y])
-        for x in range(env.dim_x - 2, 1, -1):
+        for x in range(x_dim - 2, 1, -1):  # Create last part of the path
             path_y.append([x, 1])
         path_y.insert(0, [1, 1])
     else:
         path_y = None
 
     # Building the hamiltonian x-path (if exists)
-    if env.dim_y_play % 2 == 0:
-        for y in range(1, env.dim_y - 1):
-            if y % 2 == 1:
-                start = 2
-                end = env.dim_x - 1
-                step = 1
-            else:
-                start = env.dim_x - 2
-                end = 1
-                step = -1
-            for x in range(start, end, step):
+    if y_play % 2 == 0:  # Check if the playable environment has an even number of rows
+        for y in range(1, env.dim_y - 1):   # Cycle all rows not occupied by walls
+            if y % 2 == 1:  # If I'm on an odd row
+                start, end, step = 2, env.dim_x - 1, 1
+            else:  # If I'm on an even row
+                start, end, step = env.dim_x - 2, 1, -1
+            for x in range(start, end, step):  # Create path
                 path_x.append([x, y])
-        for y in range(env.dim_y - 2, 1, -1):
+        for y in range(env.dim_y - 2, 1, -1):  # Create last part of the path
             path_x.append([1, y])
         path_x.insert(0, [1, 1])
     else:
@@ -108,6 +107,8 @@ def compute_hamiltonian(env):
 def seek_snake(path_x, path_y, env):
     snake = env.snake
     head_x, head_y = snake.head
+
+    # Which direction should I follow? I'm already in path? I need to reverse the path?
     poss_dir, is_in_path, is_reversed = check_ham_dir(path_x, path_y, snake)
 
     # the snake is already following a path?
@@ -133,8 +134,9 @@ class AgentH(Agent):
         self.is_init = True
         self._get_h_cycles()
 
+    # Get the hamiltonian paths (if exist)
     def _get_h_cycles(self):
-        y_cycle, x_cycle = compute_hamiltonian(self.environment)
+        y_cycle, x_cycle = compute_hamiltonian(self.env)
         if y_cycle is not None:
             self.h_cycles_dict["y"] = y_cycle
         else:
@@ -157,19 +159,31 @@ class AgentH(Agent):
 
         # Step to execute if the snake game is at its initial state
         # Basically I'm seeking the snake to the path
+
+        # If the snake is in its initial state
         if self.is_init is True:
-            self.is_init = False
-            direction, comm, to_reverse = seek_snake(self.x_cycle, self.y_cycle, self.environment)
+            self.is_init = False  # the snake is not more in its initial state
+
+            # Seeks snake to the path
+            direction, comm, to_reverse = seek_snake(self.x_cycle, self.y_cycle, self.env)
             path = copy(self.h_cycles_dict.get(direction))
+
             if to_reverse:  # the path needs to be reversed?
                 path[1:] = np.flipud(path[1:])
-            self.path = deque(list(path))
-            self.path.rotate(-np.where(np.all(self.environment.snake.head == path, axis=1))[0][0])
-            self.environment.step(comm)
+
+            self.path = deque(tuple(path))
+
+            # Rotate the path to head position
+            self.path.rotate(-np.where(np.all(self.env.snake.head == path, axis=1))[0][0])
+
+            # Send a command to the snake
+            self.env.step(comm)
+
+            # Rotate the command list (in this case is a circular buffer)
             self.path.rotate(-1)
         else:
-            comm = coord_dir_conv(list(self.path[0]), list(self.path[1]))
-            self.environment.step(comm)
+            comm = coord_dir_conv(tuple(self.path[0]), tuple(self.path[1]))
+            self.env.step(comm)
             self.path.rotate(-1)
 
     def reset(self):

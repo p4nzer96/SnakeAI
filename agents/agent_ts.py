@@ -1,364 +1,348 @@
-import copy
-from abc import ABCMeta, abstractmethod
-
-import numpy as np
+import random
 
 from agents.agent import Agent
-from utils import comp_dirs, coord_dir_conv, simulate_step, next_pos
-from consts import *
+from node import Node
+from utils import next_pos, coord_dir_conv, comp_dirs
 
 
-def get_cost(env, direction, size=3):
-    snake = env.snake
-    grid = simulate_step(env, direction)[0]
-    xh, yh = snake.head
+def explore(node, env):
+    # Get node parent
+    parent = node.parent
 
-    try:
+    depth = None
 
-        assert size % 2 != 0
+    nodes = []  # List of child nodes
+    x_bound, y_bound = env.dim_x - 1, env.dim_y - 1
 
-    except AssertionError("Size must be an odd number: adding 1 to current size value to make it odd"):
-
-        size += 1
-
-    offset = int((size - 1) / 2)
-
-    x_coords = np.linspace(xh - offset, xh + offset, size, dtype=int)
-    y_coords = np.linspace(yh - offset, yh + offset, size, dtype=int)
-
-    cost = 1
-
-    for x in x_coords:
-        for y in y_coords:
-            if x > env.dim_x or y > env.dim_y:
-                continue
-
-            if grid[y, x] == WALL_VALUE or grid[y, x]:
-                cost += 2
-            elif grid[y, x] == SNAKE_VALUE:
-                cost += 4
-
-    return cost
-
-
-def get_heuristic(s_x, s_y, a_x, a_y, direction):
-    delta_x = {"up": 0, "down": 0, "left": -1, "right": 1}
-    delta_y = {"up": -1, "down": 1, "left": 0, "right": 0}
-
-    heuristic = abs(s_x + delta_x.get(direction) - a_x) + abs(s_y + delta_y.get(direction) - a_y)
-
-    return heuristic
-
-
-def explore(head):
-    n = []
-    # valid direction?
+    # Translates a direction to coords
     for direction in ["up", "down", "right", "left"]:
 
-        n_pos = next_pos.get(direction)(*head)
+        # Get child coordinates
+        ch_x, ch_y = next_pos.get(direction)(*node.node_id)
 
-        if n_pos[0] < 1 or n_pos[0] >= 29 or n_pos[1] < 1 or n_pos[1] >= 29:
+        if parent:
+
+            # Assign the depth to the node if available
+            depth = parent.depth + 1 if parent.depth else None
+
+            # If child coordinates are the same as parent, discard it
+            if (ch_x, ch_y) == parent.coord:
+                continue
+
+        # if child coordinates are the same as snake coordinates, discard it
+        if [ch_x, ch_y] in env.snake.body.tolist():
             continue
-        else:
-            n.append(n_pos)
-    return n
+
+        # If child is inside the boundaries, expand it
+        if 1 <= ch_x < x_bound and 1 <= ch_y < y_bound:
+            nodes.append(Node(ch_x, ch_y, parent=node, depth=depth))
+
+    return nodes
 
 
-def greedy_search(env):
-    snake = env.snake
-    apple = env.apple
-    walls = env.wall
-
-    # Snake orientation
-    direction = env.snake.direction
-
-    # Head and apple position
-    s_x, s_y = snake.head
-    a_x, a_y = apple.position
-
-    poss_moves = ["up", "down", "right", "left"]
-
-    actions = {}
-    action_list = []
-
-    positions = snake.body.tolist()
-
-    i = 0
-
-    while True:
-
-        i += 1
-
-        for move in poss_moves:
-
-            if direction == comp_dirs[move]:
-                actions[move] = float("inf")
-            else:
-                actions[move] = get_heuristic(s_x, s_y, a_x, a_y, direction=move)
-
-        selected_action = min(actions, key=actions.get)
-        direction = selected_action
-
-        action_list.append(selected_action)
-        positions.insert(0, list(next_pos.get(selected_action)(s_x, s_y)))
-        positions.pop(-1)
-
-        s_x, s_y = next_pos.get(selected_action)(s_x, s_y)
-
-        if (s_x == a_x and s_y == a_y) or [s_x, s_y] in walls.tolist() or [s_x, s_y] in positions[1:]:
-            return action_list
-
-
-def dfs(env):
-    root = env.snake.head.tolist()
-    goal = env.apple.position.tolist()
-
-    queue = [[root]]
-
-    visited = env.snake.body.tolist()
-
-    dirs = []
-
-    while queue:
-
-        # get the first path from the queue
-        path = queue.pop(0)
-        # get the last node from the path
-        node = list(path)[-1]
-
-        # path found
-        if node == goal:
-            for i in range(len(path) - 1):
-                dirs.append(coord_dir_conv(path[i], path[i + 1]))
-            return dirs
-
-        # explore the adjacent nodes
-        adjacent = explore(node)
-
-        # for every adjacent node
-        for adj in adjacent:
-            # if the node has been visited, continue to next iteration
-            if adj not in visited:
-                # append the current node to the list of visited nodes
-                visited.append(adj)
-
-                # update path
-                new_path = list(path)
-                new_path.append(adj)
-
-                # update queue
-                queue.insert(0, new_path)
-
-
+# Breadth First Search
 def bfs(env):
-    root = env.snake.head.tolist()
-    goal = env.apple.position.tolist()
+    root = Node(*env.snake_head, depth=0)  # Root node
+    goal = Node(*env.apple_pos)  # Goal node
 
-    # maintain a queue of paths
-    queue = [[root]]
+    # Set of visited nodes: avoids to expand a node twice
+    visited = set()
 
-    # push the first path into the queue
-    visited = env.snake.body.tolist()
+    # FIFO queue used to store discovered nodes
+    queue = [root]
 
-    dirs = []
+    # While queue is not empty
     while queue:
 
-        # get the first path from the queue
-        path = queue.pop(0)
-        # get the last node from the path
-        node = list(path)[-1]
+        # Dequeue a node from queue
+        node = queue.pop(0)
 
-        # path found
+        # Check if node is goal
         if node == goal:
-            for i in range(len(path) - 1):
-                dirs.append(coord_dir_conv(path[i], path[i + 1]))
-            return dirs
+            path = node.get_path()
+            path.reverse()
+
+            return path
+
+        # If node has already been expanded, ignore it
+        if node in visited:
+            continue
+
+        # Add the child to visited set
+        visited.add(node)
+
+        # Expand the current node
+        children = explore(node, env)
+
+        for child in children:
+            # Append the child to the queue
+            queue.append(child)
+
+    return None
+
+
+# Depth First Search
+def dfs(env):
+    root = Node(*env.snake_head, depth=0)  # Root node
+    goal = Node(*env.apple_pos)  # Goal node
+
+    # Set of visited nodes: avoids to expand a node twice
+    visited = set()  # It also avoids circular paths
+
+    # LIFO stack used to store discovered nodes
+    stack = [root]
+
+    # While stack is not empty
+    while stack:
+
+        # Pop the last added node from the stack
+        node = stack.pop(0)
+
+        # If the node is the goal, then return the full path
+        if node == goal:
+            path = node.get_path()
+            path.reverse()
+
+            return path
+
+        # If child is in visited discard it
+        if node in visited:
+            continue
+
+        visited.add(node)
+
+        # Explore the current node
+        children = explore(node, env)
+
+        for child in children:
+            # Append the child to the queue
+            stack.insert(0, child)
+
+    return None
+
+
+# Greedy Best First Search
+def greedy_search(env):
+    root = Node(*env.snake_head, depth=0)  # Root node (snake's head)
+    goal = Node(*env.apple_pos)  # Goal node (apple)
+
+    # Sort paths by heuristic function
+    def heuristic(c_node):
+        x_n, y_n = c_node.coord
+        x_g, y_g = goal.coord
+        return abs(x_n - x_g) + abs(y_n - y_g)
+
+    # Setting heuristic of root node
+    root.heuristic_value = heuristic(root)
+
+    # FIFO queue used to store discovered nodes
+    queue = [root]  # Adding the root node to the queue
+
+    # A set which holds the node currently visited
+    visited = set(Node(*x) for x in env.snake_tail)
+
+    while queue:
+
+        # Pop a node from the queue
+        node = queue.pop(0)
+
+        # If the current node is equal to goal, retrieve the full path
+        if node == goal:
+            path = node.get_path()
+            path.reverse()
+
+            return path
+
+        # If the node is already visited, don't expand it
+        if node in visited:
+            continue
+
+        # If the node is not visited, expand it
+        visited.add(node)
 
         # explore the adjacent nodes
-        adjacent = explore(node)
+        children = explore(node, env)
 
         # for every adjacent node
-        for adj in adjacent:
-            # if the node has been visited, continue to next iteration
-            if adj not in visited:
-                # append the current node to the list of visited nodes
-                visited.append(adj)
+        for child in children:
+            # update queue
+            queue.append(child)
 
-                # update path
-                new_path = list(path)
-                new_path.append(adj)
+            # evaluate heuristic
+            child.heuristic_value = heuristic(child)
 
-                # update queue
-                queue.append(new_path)
+        # Sort the queue according to heuristics (from lowest to highest value)
+        queue.sort(key=lambda x: x.heuristic_value, reverse=False)
+
+    return None
 
 
+# Bidirectional Search
 def bidirectional(env):
-    def join_paths(listA, listB, common):
+    root = Node(*env.snake_head, depth=0)  # Root node (goal node for backward path)
+    goal = Node(*env.apple_pos)  # Goal node (root node for backward path)
 
-        output = []
+    # Sets of visited nodes (forward and backward)
+    visited_forward = set()
+    visited_backward = set()
 
-        for x in listA:
-            output.append(x)
-            if x == common:
-                break
-        temp_list = []
-        for x in listB:
-            if x == common:
-                break
-            temp_list.append(x)
+    # FIFO queues used for expand nodes
+    queue_forward = [root]  # Queue of the forward path
+    queue_backward = [goal]  # Queue of the backward path
 
-        temp_list.reverse()
+    # While both queues are not empty
+    while queue_forward or queue_backward:
 
-        output = output + temp_list
+        # Deque a node from forward and backward queues
 
-        return output
+        # If forward queue is not empty, pop an element from it
+        if queue_forward:
+            node_f = queue_forward.pop(0)
 
-    root = env.snake.head.tolist()
-    goal = env.apple.position.tolist()
+        # If backward queue is not empty, pop an element from it
+        if queue_backward:
+            node_b = queue_backward.pop(0)
 
-    # maintain a queue of paths
-    f_queue = [[root]]
-    b_queue = [[goal]]
+        # If current node is not visited yet (forward path)
+        if node_f not in visited_forward:
 
-    # push the first path into the queue
-    f_visited = env.snake.body.tolist()
-    b_visited = []
-    dirs = []
-    while f_queue and b_queue:
+            # Add the node to visited forward path
+            visited_forward.add(node_f)
 
-        # get the first path from the queue
-        f_path = f_queue.pop(0)
-        b_path = b_queue.pop(0)
+            # Explore
+            children = explore(node_f, env)
 
-        for c in f_path:
-            if c in b_path:
-                path = join_paths(f_path, b_path, c)
-                for i in range(len(path) - 1):
-                    dirs.append(coord_dir_conv(path[i], path[i + 1]))
-                return dirs
+            for child in children:
+                queue_forward.append(child)
 
-        # get the last node from the path
-        f_node = list(f_path)[-1]
-        b_node = list(b_path)[-1]
+        if node_b not in visited_backward:
 
-        # explore the adjacent nodes
-        f_adjacent = explore(f_node)
-        b_adjacent = explore(b_node)
+            # Add the node to visited backward path
+            visited_backward.add(node_b)
 
-        # for every adjacent node
-        for adj in f_adjacent:
-            # if the node has been visited, continue to next iteration
-            if adj not in f_visited:
-                # append the current node to the list of visited nodes
-                f_visited.append(adj)
-                # update path
-                new_path = list(f_path)
-                new_path.append(adj)
+            # Explore
+            children = explore(node_b, env)
 
-                # update queue
-                f_queue.append(new_path)
-        # for every adjacent node
-        for adj in b_adjacent:
-            # if the node has been visited, continue to next iteration
-            if adj not in b_visited:
-                # append the current node to the list of visited nodes
-                b_visited.append(adj)
+            for child in children:
+                queue_backward.append(child)
 
-                # update path
-                new_path = list(b_path)
-                new_path.append(adj)
+        # If the forward search finds a node that has been explored in the backward search
+        if node_f in visited_backward:
+            # Extract the node from the visited backward set
+            join_node = [x for x in visited_backward if x == node_f]
 
-                # update queue
-                b_queue.append(new_path)
+            # Compute full forward path
+            forward_path = node_f.get_path()
+            forward_path.reverse()
 
+            # Compute full backward path
+            backward_path = join_node[0].get_path()[1:]
+            return forward_path + backward_path
 
-def a_star_search(env):
-    snake = env.snake
-    apple = env.apple
-    walls = env.wall
+        if node_b in visited_forward:
+            # Extract the node from the visited forward set
+            join_node = [x for x in visited_forward if x == node_b]
 
-    # Snake orientation
-    direction = env.snake.direction
+            # Compute full forward path
+            forward_path = join_node[0].get_path()
+            forward_path.reverse()
 
-    s_x, s_y = snake.head
-    a_x, a_y = apple.position
+            # Compute full backward path
+            backward_path = node_b.get_path()[1:]
+            return forward_path + backward_path
 
-    poss_moves = ["up", "down", "right", "left"]
-
-    next_pos = {"up": (s_x, s_y - 1), "down": (s_x, s_y + 1),
-                "left": (s_x - 1, s_y), "right": (s_x + 1, s_y)}
-
-    actions = {}
-    action_list = []
-
-    positions = snake.body.tolist()
-
-    while True:
-
-        for move in poss_moves:
-
-            if direction == comp_dirs[move]:
-                actions[move] = float("inf")
-            else:
-                actions[move] = get_heuristic(s_x, s_y, a_x, a_y, direction=move) + + get_cost(env, direction)
-
-        selected_action = min(actions, key=actions.get)
-        direction = selected_action
-
-        action_list.append(selected_action)
-        positions.insert(0, list(next_pos.get(selected_action)))
-        positions.pop(-1)
-
-        s_x, s_y = next_pos.get(selected_action)
-
-        if (s_x == a_x and s_y == a_y) or [s_x, s_y] in walls.tolist() or [s_x, s_y] in positions:
-            return action_list
+    return None
 
 
 class AgentTS(Agent):
 
-    def __init__(self, env, mode="gbfs"):
+    def __init__(self, env, mode="bfs", r_cap=True):
         super().__init__(env)
-        self.comm_queue = None  # Queue of commands
+        self._comm_queue = None  # Queue of commands
         self.mode = mode  # Algorithm used
+        self.recover_capability = r_cap
+        self.time = []
+
+    @property
+    def comm_queue(self):
+        return self._comm_queue
+
+    @comm_queue.setter
+    def comm_queue(self, nodes):
+
+        if nodes is None or all(x in ["up", "down", "right", "left"] for x in nodes):
+            self._comm_queue = nodes
+
+        elif all(type(x) == tuple for x in nodes):
+            n_dirs = [coord_dir_conv(nodes[i], nodes[i + 1]) for i in range(len(nodes) - 1)]
+
+            if any(x is None for x in n_dirs):
+                raise ValueError("Something went wrong in dirs generation")
+            else:
+                self._comm_queue = n_dirs
+
+        else:
+            raise ValueError("Something went wrong in path generation")
 
     def step(self):
 
         if not self.comm_queue:
 
             # Greedy Best First Search
-
             if self.mode == "gbfs":
-                self.comm_queue = greedy_search(self.environment)
-
-            # A Star Search TODO: see if makes sense to maintain this algorithm
-
-            elif self.mode == "a_star":
-                self.comm_queue = a_star_search(self.environment)
+                self.comm_queue = greedy_search(self.env)
 
             # Breadth First Search
-
             elif self.mode == "bfs":
-                self.comm_queue = bfs(self.environment)
+                self.comm_queue = bfs(self.env)
 
+            # Depth First Search
             elif self.mode == "dfs":
-                self.comm_queue = dfs(self.environment)
+                self.comm_queue = dfs(self.env)
 
+            # Bidirectional Search (BFS implementation)
             elif self.mode == "bdir":
-                self.comm_queue = bidirectional(self.environment)
+                self.comm_queue = bidirectional(self.env)
 
             else:
                 raise ValueError("Unknown mode")
 
+        # If a command is found
+        if self.comm_queue:
+            command = self.comm_queue.pop(0)
+
         # If the queue is still empty (i.e. no solution was found, keep the current direction)
+        else:
+            if self.recover_capability:
+                command = self.recover() if self.recover() else self.env.snake.direction
+            else:
+                command = self.env.snake.direction
 
-        try:
-            comm = self.comm_queue.pop(0)
+        self.env.step(command)
 
-        except AttributeError:
-            comm = self.environment.snake.direction
+    def recover(self):
 
-        self.environment.step(comm)
+        head = self.env.snake_head
+        body = self.env.snake_body
+        walls = self.env.wall_pos
 
+        command_list = ["up", "down", "right", "left"]
+        current_dir = self.env.snake.direction
+        command_list.remove(comp_dirs.get(current_dir))
+        command_list.remove(current_dir)
+
+        command = self.env.snake.direction
+
+        while next_pos.get(command)(*head) in body or next_pos.get(command)(*head) in walls:
+            if not command_list:
+                return self.env.snake.direction
+            print("recovering")
+            command = random.choice(command_list)
+            command_list.remove(command)
+
+        return command
+
+    # Resets the agent to its initial state
     def reset(self):
         self.comm_queue = None  # Queue of commands
+        self.time = []
