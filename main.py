@@ -24,62 +24,17 @@ def call_step():
 
 
 mode = "auto"  # The snake is controlled via the agent or the keyboard (latter not implemented)
-algorithm = "dfs"  # Algorith used by the agent
-debug = True
-
+algorithm = "bfs"  # Algorithm used by the agent
+à
 if __name__ == "__main__":
 
-    if debug is False:
-        if mode == "auto":
-
-            # Creating the snake environment
-            env = SnakeEnv(30, 30)  # Currently only 30x30 resolution is supported  by the gui
-            stats = Stats(algorithm, env)
-            # Agent selection: hamiltonian vs tree-search based
-            if algorithm in ["gbfs", "bfs", "dfs", "bdir"]:
-                agent = AgentTS(env, mode=algorithm)
-
-            elif algorithm == "hamiltonian":
-                agent = AgentH(env)
-
-            else:
-                raise ValueError("Unknown or not-implemented algorithm ")
-
-            root = tk.Tk()
-            w = env.dim_y * 20  # Width
-            h = env.dim_y * 20  # Height
-
-            screen_width = root.winfo_screenwidth()  # Width of the screen
-            screen_height = root.winfo_screenheight()  # Height of the screen
-
-            # Calculate Starting X and Y coordinates for Window
-            x, y = (screen_width / 2) - (w / 2), (screen_height / 2) - (h / 2)
-
-            # Defining the window
-            root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-            root.configure(bg='black')  # Selecting the background color
-            root.title("Snake")  # Window title
-            root.resizable(False, False)  # Setting the window as not resizable
-
-            # Calling the window
-            root.tk.call("tk", "scaling", 4.0)
-
-            # Initializing the gui
-            board = SnakeGui(env.snake.blocks, env.apple.position, env.wall)
-
-            call_step()
-            root.mainloop()
-
-        elif mode == "manual":
-            # TODO: this section allows the user to control the snake via keystrokes (not available in the current
-            #  version of the code)
-            pass
-    else:
-        env = SnakeEnv(30, 30)
+    if mode == "auto":
+        # Creating the snake environment
+        env = SnakeEnv(30, 30)  # Currently only 30x30 resolution is supported  by the gui
         stats = Stats(algorithm, env)
         # Agent selection: hamiltonian vs tree-search based
         if algorithm in ["gbfs", "bfs", "dfs", "bdir"]:
-            agent = AgentTS(env, mode=algorithm, recover_trial=True)
+            agent = AgentTS(env, mode=algorithm)
 
         elif algorithm == "hamiltonian":
             agent = AgentH(env)
@@ -87,34 +42,32 @@ if __name__ == "__main__":
         else:
             raise ValueError("Unknown or not-implemented algorithm ")
 
-        deltas = []
-        moves_list = []
-        status = dict()
-        run = 0
-        counter = 0
-        apples = 1
-        while True:
-            if env.last_event and env.last_event == DEATH:  # If last event is DEATH, reset the agent to initial
-                # state
-                status[run] = {"Mode": algorithm, "Moves": moves_list, "Apples": apples, "Time": agent.time}
-                agent.reset()
-                counter = 0
-                apples = 0
-                run += 1
-                moves_list = []
-            elif env.last_event == GOAL:
-                moves_list.append(counter)
-                counter = 0
-                apples += 1
-            else:
-                counter += 1
+        root = tk.Tk()
+        w = env.dim_y * 20  # Width
+        h = env.dim_y * 20  # Height
 
-            agent.step()  # Call the execution of a step of the agent
+        screen_width = root.winfo_screenwidth()  # Width of the screen
+        screen_height = root.winfo_screenheight()  # Height of the screen
 
-            print("\rCount: {}".format(env.death_count), end='')
+        # Calculate Starting X and Y coordinates for Window
+        x, y = (screen_width / 2) - (w / 2), (screen_height / 2) - (h / 2)
 
-            if env.death_count == 200:
-                print("\nFinished -> Algorithm: {}".format(algorithm))
-                with open("stats/stats_{}_{}.json".format(algorithm, "recovery"), 'w') as f:
-                    f.write(json.dumps(status, indent=4))
-                exit()
+        # Defining the window
+        root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        root.configure(bg='black')  # Selecting the background color
+        root.title("Snake")  # Window title
+        root.resizable(False, False)  # Setting the window as not resizable
+
+        # Calling the window
+        root.tk.call("tk", "scaling", 4.0)
+
+        # Initializing the gui
+        board = SnakeGui(env.snake.blocks, env.apple.position, env.wall)
+
+        call_step()
+        root.mainloop()
+
+    elif mode == "manual":
+        # TODO: this section allows the user to control the snake via keystrokes (not available in the current
+        #  version of the code)
+        pass

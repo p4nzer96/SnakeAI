@@ -1,8 +1,13 @@
+import gc
 import random
 
 from agents.agent import Agent
 from node import Node
 from utils import next_pos, coord_dir_conv, comp_dirs
+
+
+def on_collect(obj):
+    print(f"Object {obj} is being garbage collected.")
 
 
 def explore(node, env):
