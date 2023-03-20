@@ -25,7 +25,7 @@ def call_step():
 
 mode = "auto"  # The snake is controlled via the agent or the keyboard (latter not implemented)
 algorithm = "bfs"  # Algorithm used by the agent
-à
+
 if __name__ == "__main__":
 
     if mode == "auto":
