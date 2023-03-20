@@ -11,7 +11,7 @@ from stats import Stats
 
 # Every n milliseconds, step function is called
 def call_step():
-    time = 1
+    time = 30
     try:
         if env.last_event == DEATH:  # If last event is DEATH, reset the agent to initial state
             agent.reset()
