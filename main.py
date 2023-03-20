@@ -1,9 +1,8 @@
-import json
 import tkinter as tk
 
 from agents.agent_h import AgentH
 from agents.agent_ts import AgentTS
-from consts import DEATH, GOAL
+from consts import DEATH
 from gui import SnakeGui
 from snake_env import SnakeEnv
 from stats import Stats
