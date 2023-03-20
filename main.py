@@ -24,12 +24,12 @@ def call_step():
 
 
 mode = "auto"  # The snake is controlled via the agent or the keyboard (latter not implemented)
-algorithm = "bfs"  # Algorith used by the agent
+algorithm = "dfs"  # Algorith used by the agent
 debug = True
 
 if __name__ == "__main__":
 
-    if debug is True:
+    if debug is False:
         if mode == "auto":
 
             # Creating the snake environment
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         stats = Stats(algorithm, env)
         # Agent selection: hamiltonian vs tree-search based
         if algorithm in ["gbfs", "bfs", "dfs", "bdir"]:
-            agent = AgentTS(env, mode=algorithm)
+            agent = AgentTS(env, mode=algorithm, recover_trial=True)
 
         elif algorithm == "hamiltonian":
             agent = AgentH(env)
@@ -111,8 +111,10 @@ if __name__ == "__main__":
 
             agent.step()  # Call the execution of a step of the agent
 
+            print("\rCount: {}".format(env.death_count), end='')
+
             if env.death_count == 200:
-                print("Finished -> Algorithm: {}".format(algorithm))
-                with open("stats/stats_{}_{}.json".format(algorithm, "60"), 'w') as f:
+                print("\nFinished -> Algorithm: {}".format(algorithm))
+                with open("stats/stats_{}_{}.json".format(algorithm, "recovery"), 'w') as f:
                     f.write(json.dumps(status, indent=4))
                 exit()

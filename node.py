@@ -58,7 +58,7 @@ class Node:
         name = self.node_id
         return hash("{}".format(name))
 
-    # Two nodes are considered equal if they share the same id
+    # Two nodes are considered equal if they share the same id (coordinate)
     def __eq__(self, other):
         return self.node_id == other.node_id
 

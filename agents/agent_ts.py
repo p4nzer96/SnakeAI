@@ -190,6 +190,8 @@ def bidirectional(env):
     queue_forward = [root]  # Queue of the forward path
     queue_backward = [goal]  # Queue of the backward path
 
+    node_f, node_b = [], []
+
     # While both queues are not empty
     while queue_forward or queue_backward:
 
@@ -256,11 +258,11 @@ def bidirectional(env):
 
 class AgentTS(Agent):
 
-    def __init__(self, env, mode="bfs", r_cap=True):
+    def __init__(self, env, mode="bfs", recover_trial=False):
         super().__init__(env)
         self._comm_queue = None  # Queue of commands
         self.mode = mode  # Algorithm used
-        self.recover_capability = r_cap
+        self.recover_capability = recover_trial
         self.time = []
 
     @property
@@ -320,25 +322,27 @@ class AgentTS(Agent):
 
         self.env.step(command)
 
+    # Try to recover the snake from a possible death
     def recover(self):
 
         head = self.env.snake_head
         body = self.env.snake_body
         walls = self.env.wall_pos
 
-        command_list = ["up", "down", "right", "left"]
-        current_dir = self.env.snake.direction
-        command_list.remove(comp_dirs.get(current_dir))
-        command_list.remove(current_dir)
+        command_list = ["up", "down", "right", "left"]  # All possible direction of the snake
+        current_dir = self.env.snake.direction  # Take the current direction of the snake
 
-        command = self.env.snake.direction
+        command_list.remove(comp_dirs.get(current_dir))  # Remove the complementary direction from command list
+        command_list.remove(current_dir)  # Remove the current direction from the command list
 
+        command = self.env.snake.direction  # First, set the current direction as default command
+
+        # Until the selected direction is brings us to a dead end, try another direction
         while next_pos.get(command)(*head) in body or next_pos.get(command)(*head) in walls:
-            if not command_list:
+            if not command_list:  # If command list is empty, return the current direction as command (NOP)
                 return self.env.snake.direction
-            print("recovering")
-            command = random.choice(command_list)
-            command_list.remove(command)
+            command = random.choice(command_list)  # Select a random command from the command list
+            command_list.remove(command)  # Remove the current command from the command list
 
         return command
 
